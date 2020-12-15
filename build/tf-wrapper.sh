@@ -31,9 +31,12 @@ tf_apply() {
   echo "*************** TERRAFORM APPLY *******************"
   echo "      At environment: ${tf_component}/${tf_env} "
   echo "***************************************************"
+  if [ ! -d "${tmp_plan}" ]; then
+    mkdir "${tmp_plan}" || exit
+  fi
   if [ -d "$path" ]; then
     cd "$path" || exit
-    terraform apply -input=false -auto-approve "${tmp_plan}/${tf_component}-${tf_env}.tfplan" || exit 1
+    terraform apply -input=false -auto-approve "${tmp_plan}/${tf_component}-${tf_env}.tfplan" | tee "${tmp_plan}/log-${tf_component}-${tf_env}.tfapply.txt" || exit 1
     cd "$base_dir" || exit
   else
     echo "ERROR:  ${path} does not exist"
@@ -48,9 +51,12 @@ tf_init() {
   echo "*************** TERRAFORM INIT *******************"
   echo "      At environment: ${tf_component}/${tf_env} "
   echo "**************************************************"
+  if [ ! -d "${tmp_plan}" ]; then
+    mkdir "${tmp_plan}" || exit
+  fi
   if [ -d "$path" ]; then
     cd "$path" || exit
-    terraform init || exit 11
+    terraform init | tee "${tmp_plan}/log-${tf_component}-${tf_env}.tfinit.txt" || exit 11
     cd "$base_dir" || exit
   else
     echo "ERROR:  ${path} does not exist"
@@ -70,7 +76,7 @@ tf_plan() {
   fi
   if [ -d "$path" ]; then
     cd "$path" || exit
-    terraform plan -input=false -out "${tmp_plan}/${tf_component}-${tf_env}.tfplan" || exit 21
+    terraform plan -input=false -out "${tmp_plan}/${tf_component}-${tf_env}.tfplan" | tee "${tmp_plan}/log-${tf_component}-${tf_env}.tfplan.txt"  || exit 21
     cd "$base_dir" || exit
   else
     echo "ERROR:  ${tf_env} does not exist"
@@ -142,6 +148,23 @@ tf_validate() {
     fi
   fi
 }
+
+
+# Convert log files to the HTML
+convert_on_exit()
+{
+  apt-get update
+  apt-get install -y aha
+
+  find "${tmp_plan}" -mindepth 1 -maxdepth 2 -type f \
+    -name "log-*.tf*.txt" | while read -r component_path ; do
+      output_path="${component_path%.txt}.html"
+      aha -f "${component_path}" > "${output_path}"
+  done
+}
+
+# install converter on EXIT signal
+trap convert_on_exit EXIT
 
 # Runs single action for each instance of env in folder hierarchy.
 single_action_runner() {

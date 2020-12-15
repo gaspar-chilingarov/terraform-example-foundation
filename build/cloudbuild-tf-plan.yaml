@@ -39,4 +39,4 @@ steps:
 artifacts:
   objects:
     location: 'gs://${_ARTIFACT_BUCKET_NAME}/terraform/cloudbuild/plan/${BUILD_ID}'
-    paths: ['cloudbuild-tf-plan.yaml', 'tmp_plan/*.tfplan']
+    paths: ['cloudbuild-tf-plan.yaml', 'tmp_plan/*.tfplan', 'tmp_plan/log-*.tf*.txt', 'tmp_plan/log-*.tf*.html' ]
